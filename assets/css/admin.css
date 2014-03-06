@@ -1,0 +1,65 @@
+@charset "utf-8";
+/* CSS Document */
+html, body {
+	height: 100%;
+}
+
+html {
+	background-color: #fff;
+}
+
+
+
+.login #nav a, .login #backtoblog a {
+	color:#FFF;
+}
+
+/* Login Screen */
+body.login {
+	background: url('http://cdn.wordimpress.com/wp-content/themes/wordimpress-new/assets/img/blurred-desert.jpg') no-repeat center center fixed;
+	-webkit-background-size: cover;
+	-moz-background-size: cover;
+	-o-background-size: cover;
+	background-size: cover;
+	background-color: #EEE;
+	padding-top: 0;
+}
+
+#login {
+	margin: 0 auto;
+	padding-top: 30px;
+}
+
+#login h1 {
+	margin-top: 60px;
+	padding: 20px 0 0;
+}
+
+#login h1 a {
+	background: url('http://cdn.wordimpress.com/wp-content/themes/wordimpress-new/assets/css/../img/wordimpress-logo.png') no-repeat top left !important;
+	height: 70px;
+	width: 190px !important;
+	margin: 0 auto 30px;
+}
+
+#login form {
+	box-shadow: 0 4px 18px #1D2736;
+	-moz-box-shadow: 0 4px 18px #1D2736;
+}
+
+.login #nav a, .login #backtoblog a {
+	text-shadow: none;
+}
+
+/* Dashboard & Menu Items */
+
+.menu-icon-links {
+	display: none !important;
+}
+
+/* Hide plugin update */
+
+#advanced-post-types-order + .plugin-update-tr {
+	display: none;
+}
+
