@@ -1,0 +1,9 @@
+[submodule "includes/wordpress-custom-post-types"]
+	path = includes/wordpress-custom-post-types
+	url = git://github.com/beaucharman/wordpress-custom-post-types
+[submodule "includes/wordpress-custom-taxonomies"]
+	path = includes/wordpress-custom-taxonomies
+	url = git://github.com/beaucharman/wordpress-custom-taxonomies
+[submodule "includes/cmb"]
+	path = includes/cmb
+	url = git://github.com/webdevstudios/custom-metaboxes-and-fields-for-wordpress
