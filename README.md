@@ -1,6 +1,6 @@
 Custom Functionality Plugin Example
 ===================================
-Contributors:      Devin Walker (@wordimpress / wordimpress.com)
+Contributors:      Devin Walker (@wordimpress / wordimpress.com)  
 Version:           1.2
 Requires at least: 3.6
 Tested up to:      3.8.1
