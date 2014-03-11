@@ -4,7 +4,7 @@ Plugin Name: WordImpress Custom Functions
 Plugin URI: http://wordimpress.com
 Description: Custom functions for the ::client name:: website
 Author: Devin Walker
-Version: 1.1
+Version: 1.2
 Requires at least: 3.8.1
 Author URI: http://imdev.in
 */
