@@ -28,3 +28,7 @@ if ( file_exists( plugin_dir_path( __FILE__ ) . 'lib/custom-post-types.php' ) ) 
 if ( file_exists( plugin_dir_path( __FILE__ ) . 'lib/custom-taxonomies.php' ) ) {
 	require_once( 'lib/custom-taxonomies.php' );
 }
+//Required Plugins
+if ( file_exists( plugin_dir_path( __FILE__ ) . 'lib/required-plugins.php' ) ) {
+	require_once( 'lib/required-plugins.php' );
+}

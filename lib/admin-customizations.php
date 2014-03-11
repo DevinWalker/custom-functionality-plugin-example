@@ -3,7 +3,6 @@
  *  Admin Customizations
  *
  * @description: All functions that customize the admin area go here
- * @since      : 1.1
  */
 
 //* custom CSS for admin logo and layout

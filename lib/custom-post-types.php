@@ -3,7 +3,6 @@
  *  Custom Post Types
  *
  * @description: Registers all Custom Post Types using Bamboo CPT helper class
- * @since      : 1.1
  */
 
 /**

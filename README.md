@@ -15,7 +15,7 @@ This plugin contains a number of submodules of popular GitHub repos that allow y
 
 ### Example CPT and Taxonomy with CMBs
 
-This plugin includes a sample Custom Post Type "Movies" with an attached Custom Taxonomy "Genre" to help you get started using the included helper classes. There is also a sample Custom Metabox setup which is attached to the "Movies" CPT; this custom metabox has two example fields.
+This plugin includes a sample Custom Post Type "Movies" with an attached Custom Taxonomy "Genres" to help you get started using the included helper classes. There is also a sample Custom Metabox setup which is attached to the "Movies" CPT; this custom metabox has two example fields.
 
 ## Have an Idea? Interested in Contributing?
 

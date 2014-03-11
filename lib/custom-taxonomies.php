@@ -3,7 +3,6 @@
  *  Custom Taxonomies
  *
  * @description: Registers and attaches all Custom Taxonomies using Bamboo Taxonomies helper class
- * @since      : 1.1
  */
 
 /**

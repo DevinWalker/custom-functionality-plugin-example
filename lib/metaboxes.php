@@ -3,8 +3,6 @@
  *  Metaboxes
  *
  * @description: Contains all Custom Metaboxes and Fields functions
- * @since      : 1.1
- * @created    : 3/10/14
  */
 
 /**

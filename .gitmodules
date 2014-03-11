@@ -7,3 +7,6 @@
 [submodule "includes/cmb"]
 	path = includes/cmb
 	url = git://github.com/webdevstudios/custom-metaboxes-and-fields-for-wordpress
+[submodule "includes/tgm-plugin-activation"]
+	path = includes/tgm-plugin-activation
+	url = https://github.com/thomasgriffin/TGM-Plugin-Activation.git
