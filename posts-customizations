@@ -1,0 +1,232 @@
+<?php
+/**
+ *  Posts Customizations
+ *
+ * @description: All functions that customize the posts go here
+ */
+
+
+/**********************
+*
+* -Post List- Adding thumbnail and word count to Post List.
+*
+* http://theme.fm/2011/07/hacking-the-wordpress-admin-mastering-custom-columns-758/
+*
+**********************/
+
+add_action( 'after_setup_theme', 'my_thumbnail_setup' );
+function my_thumbnail_setup() {
+	add_image_size( 'edit-screen-thumbnail', 100, 100, true );
+}
+
+add_filter( 'manage_edit-post_columns', 'my_columns_filter', 10, 1 );
+function my_columns_filter( $columns ) {
+ 	$column_thumbnail = array( 'thumbnail' => 'Thumbnail' );
+	$column_wordcount = array( 'wordcount' => 'Word count' );
+	$columns = array_slice( $columns, 0, 1, true ) + $column_thumbnail + array_slice( $columns, 1, NULL, true );
+	$columns = array_slice( $columns, 0, 3, true ) + $column_wordcount + array_slice( $columns, 3, NULL, true );
+	return $columns;
+}
+
+add_action( 'manage_posts_custom_column', 'my_column_action', 10, 1 );
+function my_column_action( $column ) {
+	global $post;
+	switch ( $column ) {
+		case 'thumbnail':
+			echo get_the_post_thumbnail( $post->ID, 'edit-screen-thumbnail' );
+			break;
+		case 'wordcount':
+			echo str_word_count( $post->post_content );
+			break;
+	}
+}
+
+
+
+/**************
+* Number of media used in each post
+*
+* http://wpsnipp.com/index.php/functions-php/display-post-attachment-count-in-admin-column/
+*
+********************
+
+
+add_filter('manage_posts_columns', 'posts_columns_attachment_count', 5);
+add_action('manage_posts_custom_column', 'posts_custom_columns_attachment_count', 5, 2);
+function posts_columns_attachment_count($defaults){
+    $defaults['wps_post_attachments'] = __('Media');
+    return $defaults;
+}
+function posts_custom_columns_attachment_count($column_name, $id){
+        if($column_name === 'wps_post_attachments'){
+        $attachments = get_children(array('post_parent'=>$id));
+        $count = count($attachments);
+        if($count !=0){echo $count;}
+    }
+}
+
+
+
+
+/******************************
+*
+* -Post List- Add a color for draft, pending and published posts
+*
+* http://wpsnipp.com/index.php/functions-php/change-admin-postpage-color-by-status-draft-pending-published-future-private/
+*
+**********************/
+
+add_action('admin_footer','posts_status_color');
+  function posts_status_color(){
+?>
+<style>
+  .status-draft{background: #FCE3F2 !important;}
+ .status-pending{background: #87C5D6 !important;}
+ .status-publish{/* no background keep wp alternating colors */}
+  .status-future{background: #C6EBF5 !important;}
+ .status-private{background:#F2D46F;}
+</style>
+<?php
+}
+
+
+/**************************  https://github.com/cosmic/cosmic-tinymce-excerpt
+ * Plugin Name: Cosmic TinyMCE Excerpt
+ * Description: TinyMCE pour les extraits
+ * Author: Agence Cosmic
+ * Author URI: http://agencecosmic.com/
+ * Version: 1.0
+ ****************************/
+
+function cosmic_activate_page_excerpt() {
+  add_post_type_support('page', array('excerpt'));
+}
+add_action('init', 'cosmic_activate_page_excerpt');
+
+# Removes default extracts and replaces them with new blocks
+function cosmic_replace_post_excerpt() {
+  foreach (array("post", "page") as $type) {
+    remove_meta_box('postexcerpt', $type, 'normal');
+    add_meta_box('postexcerpt', __('Excerpt'), 'cosmic_create_excerpt_box', $type, 'normal');
+  }
+}
+add_action('admin_init', 'cosmic_replace_post_excerpt');
+
+function cosmic_create_excerpt_box() {
+  global $post;
+  $id = 'excerpt';
+  $excerpt = cosmic_get_excerpt($post->ID);
+
+  wp_editor($excerpt, $id);
+}
+
+function cosmic_get_excerpt($id) {
+  global $wpdb;
+  $row = $wpdb->get_row("SELECT post_excerpt FROM $wpdb->posts WHERE id = $id");
+  return $row->post_excerpt;
+}
+
+
+/*********************************
+* Duplicate Post or page
+* http://www.1stwebdesigner.com/12-wordpress-coding-snippets-hacks/
+*
+***********************************/
+
+    function duplicate($post) {
+        $title =  get_the_title($post);
+        $post = array(
+            'post_title' => $title,
+            'post_status' => 'publish',
+            'post_type' => 'post',
+            'post_author' => 1
+        );
+        $post_id = wp_insert_post( $post );
+ 
+        $data = get_post_custom($post);
+ 
+        foreach ( $data as $key => $values) {
+            foreach ($values as $value) {
+                add_post_meta( $post_id, $key, $value );
+            }
+        }
+ 
+        return $post_id;
+    }
+
+
+
+
+/*********************************************************
+* Change read more link in a post.
+* http://www.narga.net/customizing-wordpress-read-more/
+*
+**********************************************************/
+
+add_filter( 'the_content_more_link', 'read_more_link', 10, 2 );
+ 
+function read_more_link( $more_link, $more_link_text ) {
+	return str_replace( $more_link_text, 'Continue reading →', $more_link );
+}
+
+
+/*******************************************************
+* Prevent page scroll when clicking the More link
+* http://www.narga.net/customizing-wordpress-read-more/
+*
+********************************************************/
+
+function remove_more_link_scroll( $link ) {
+	$link = preg_replace( '|#more-[0-9]+|', '', $link );
+	return $link;
+}
+add_filter( 'the_content_more_link', 'remove_more_link_scroll' );
+
+
+/******************************************************
+*
+* Change Post label to Article/Posts
+* http://www.paulund.co.uk/change-posts-text-in-admin-menu
+*
+*******************************************************/
+
+/**
+ * Change the post menu to article
+ */
+function change_post_menu_text() {
+  global $menu;
+  global $submenu;
+
+  // Change menu item
+  $menu[5][0] = 'Article/Posts';
+
+  // Change post submenu
+  $submenu['edit.php'][5][0] = 'Articles';
+  $submenu['edit.php'][10][0] = 'Add Articles';
+  $submenu['edit.php'][16][0] = 'Articles Tags';
+}
+
+add_action( 'admin_menu', 'change_post_menu_text' );
+
+
+
+/**
+ * Change the post type labels
+ */
+function change_post_type_labels() {
+  global $wp_post_types;
+
+  // Get the post labels
+  $postLabels = $wp_post_types['post']->labels;
+  $postLabels->name = 'Articles/Posts';
+  $postLabels->singular_name = 'Articles';
+  $postLabels->add_new = 'Add Articles';
+  $postLabels->add_new_item = 'Add Articles';
+  $postLabels->edit_item = 'Edit Articles';
+  $postLabels->new_item = 'Articles';
+  $postLabels->view_item = 'View Articles';
+  $postLabels->search_items = 'Search Articles';
+  $postLabels->not_found = 'No Articles found';
+  $postLabels->not_found_in_trash = 'No Articles found in Trash';
+}
+add_action( 'init', 'change_post_type_labels' );
