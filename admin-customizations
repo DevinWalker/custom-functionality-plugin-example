@@ -1,0 +1,482 @@
+<?php
+/**
+ *  Admin Customizations
+ *
+ * @description: All functions that customize the admin area go here
+ */
+
+
+/************
+* Automatic update of themes, plugins and major WP versions.
+*
+* http://www.wpwhitesecurity.com/wordpress-tutorial/guide-configuring-wordpress-automatic-updates/
+*
+*************************/
+
+/* Allow major updates to be automatic updated */
+add_filter('allow_major_auto_core_updates', '__return_true' );
+
+/* Allow themes to be automatic updated */
+add_filter( 'auto_update_theme', '__return_true');
+
+/* Allow plugins to be automatic updated */
+add_filter( 'auto_update_plugin', '__return_true' );
+
+
+
+/***********************************************************************
+* Adds a -- favicon -- 
+* and CSS for login screen, dashboard and sidebar items
+*
+*************************************************************************/
+function wordimpress_custom_styles() {
+
+	//* Adds a favicon
+	echo '<link rel="shortcut icon" type="image/png" href="' . plugins_url( 'assets/img/favicon.ico',  dirname(__FILE__) ) . '" />';
+	
+	//* Adds the admin.css file
+	echo '<link rel="stylesheet" href="' . plugins_url( 'assets/css/admin.css', dirname(__FILE__) ) . '" type="text/css" media="screen" />';
+	
+}
+
+//* Adds the favicon to the login screen and the backend admin area 
+add_action( 'login_head', 'wordimpress_custom_styles' );
+add_action( 'admin_head', 'wordimpress_custom_styles' );
+
+
+/***********************************************
+* Login with username or email address:
+* http://en.bainternet.info/2013/wordpress-allow-login-with-email
+*
+***********************************************/
+
+add_filter('authenticate', 'bainternet_allow_email_login', 20, 3);
+function bainternet_allow_email_login( $user, $username, $password ) {
+    if ( is_email( $username ) ) {
+        $user = get_user_by_email( $username );
+        if ( $user ) $username = $user->user_login;
+        
+    }
+    return wp_authenticate_username_password( null, $username, $password );
+}
+
+add_filter( 'gettext', 'addEmailToLogin', 20, 3 );
+function addEmailToLogin( $translated_text, $text, $domain ) {
+    if ( "Username" == $translated_text )
+        $translated_text .= __( ' Or Email');
+    return $translated_text;
+}
+
+
+/*************************************************
+* domainname.com/login after the domain name redirects to the correct wp-login.php url. 
+* http://en.bainternet.info/2012/wordpress-easy-login-url-with-no-htaccess
+*
+***************************************************/
+
+// Add rewrite rule and flush on plugin activation
+register_activation_hook( __FILE__, 'NLURL_activate' );
+function NLURL_activate() {
+    if (! get_option('permalink_structure') ){
+        add_action('admin_notices', 'permalink_structure_admin_notice');
+    }
+    NLURL_rewrite();
+    flush_rewrite_rules();
+}
+ 
+// Flush on plugin deactivation
+register_deactivation_hook( __FILE__, 'NLURL_deactivate' );
+function NLURL_deactivate() {
+    flush_rewrite_rules();
+}
+ 
+// Create new rewrite rule
+add_action( 'init', 'NLURL_rewrite' );
+function NLURL_rewrite() {
+    add_rewrite_rule( 'login/?$', 'wp-login.php', 'top' );
+    add_rewrite_rule( 'register/?$', 'wp-login.php?action=register', 'top' );
+    add_rewrite_rule( 'forgot/?$', 'wp-login.php?action=lostpassword', 'top' );
+}
+ 
+ 
+//register url fix
+add_filter('register','fix_register_url');
+function fix_register_url($link){
+    return str_replace(site_url('wp-login.php?action=register', 'login'),site_url('register', 'login'),$link);
+}
+ 
+
+/******************************
+login url fix
+add_filter('login_url','fix_login_url');
+function fix_login_url($link){
+    return str_replace(site_url('wp-login.php', 'login'),site_url('login', 'login'),$link);
+}
+*******************************/
+ 
+//forgot password url fix
+add_filter('lostpassword_url','fix_lostpass_url');
+function fix_lostpass_url($link){
+    return str_replace('?action=lostpassword','',str_replace(network_site_url('wp-login.php', 'login'),site_url('forgot', 'login'),$link));
+}
+ 
+//Site URL hack to overwrite register url
+add_filter('site_url','fix_urls',10,3);
+function fix_urls($url, $path, $orig_scheme){
+    if ($orig_scheme !== 'login')
+        return $url;
+    if ($path == 'wp-login.php?action=register')
+        return site_url('register', 'login');
+ 
+    return $url;
+}
+//notice if user needs to enable permalinks
+function permalink_structure_admin_notice(){
+    echo '<div id="message" class="error"><p>Please Make sure to enable <a href="options-permalink.php">Permalinks</a>.</p></div>';
+}
+
+
+/********************************************************************
+* replace WordPress Howdy
+* http://www.trickspanda.com/2014/01/change-howdy-text-wordpress-admin-bar/
+*
+********************************************************************/
+function change_howdy($translated, $text, $domain) {
+
+    if (!is_admin() || 'default' != $domain)
+        return $translated;
+    if (false !== strpos($translated, 'Howdy'))
+        return str_replace('Howdy', 'Welcome', $translated);
+    return $translated;
+}
+add_filter('gettext', 'change_howdy', 10, 3);
+
+
+/***************************************
+* Change --Footer text-- in WordPress admin/backend
+* http://www.trickspanda.com/2014/01/change-footer-text-wordpress-admin-panel/
+*
+***************************************/
+function remove_footer_admin () {
+	echo 'Made with <a href="http://www.wordpress.org" target="_blank">WordPress</a> | Initial creation by <a href="http://wordimpress.com/" target="_blank">WordImpress</a> | WordPress Tutorials: <a href="http://easywebdesigntutorials.com/" target="_blank">Easy Web Design Tutorials</a></p>';
+}
+add_filter('admin_footer_text', 'remove_footer_admin');
+
+
+/***************************************************
+* Reveal page IDs - Ads the Page ID on the Pages list screen
+*
+* http://markgoodyear.com/2013/07/display-page-id-wordpress-admin-area/
+* There is also a plugin: http://wordpress.org/plugins/reveal-ids-for-wp-admin-25/
+****************************************************/
+
+// Set columns to be used in the Pages section
+function custom_set_pages_columns($columns) {
+  return array(
+    'cb' => '<input type="checkbox" />',
+    'page_id' => __('ID'),
+    'title' => __('Title'),
+    'author' => __('Author'),
+    'date' => __('Date'),
+  );
+}
+
+// Add the ID to the page ID column
+function custom_set_pages_columns_page_id( $column, $post_id ) {
+  if ($column == 'page_id'){
+    echo $post_id;
+  }
+}
+
+// Add custom styles to the page ID column
+function custom_admin_styling() {
+  echo '<style type="text/css">',
+    'th#page_id{width:60px;}',
+    '</style>';
+}
+
+// Add filters and actions
+add_filter('manage_edit-page_columns' , 'custom_set_pages_columns');
+add_action( 'manage_pages_custom_column' , 'custom_set_pages_columns_page_id', 10, 2 );
+add_action('admin_head', 'custom_admin_styling');
+
+	
+
+
+/************************ ---- CHECK THE CODE - It effects the visibility of Posts ----
+* Hide items from wp-admin menu for non admin users
+* http://www.1stwebdesigner.com/wordpress/12-wordpress-coding-snippets-hacks/
+*
+*************************
+
+
+    function remove_dashboard_widgets() {
+        global $menu,$submenu;
+
+        global $current_user;
+        get_currentuserinfo();
+
+        if ($current_user->ID != 1) { // only admin sees the whole thing
+            // $menu and $submenu will return fo all menu and submenu list in admin panel .
+            $menu[2] = ""; //Dashboard
+            $menu[5] = ""; // Posts
+            $menu[15] = ""; //Links
+            $menu[25] = ""; //Comments
+            $menu[65] = ""; //Plugins
+
+            unset($submenu['themes.php'][5]); //themes
+            unset($submenu['themes.php'][12]); //editor
+        }
+    }
+    add_action('admin_head', 'remove_dashboard_widgets');
+
+
+/********************************************
+*
+* Add TinyMCE Editor to Category Description -- Is not working correctly-
+*
+* http://www.paulund.co.uk/add-tinymce-editor-category-description
+*
+**********************************************/
+
+// remove the html filtering
+remove_filter( 'pre_term_description', 'wp_filter_kses' );
+remove_filter( 'term_description', 'wp_kses_data' );
+
+add_filter('edit_category_form_fields', 'cat_description');
+function cat_description($tag)
+{
+    ?>
+        <table class="form-table">
+            <tr class="form-field">
+                <th scope="row" valign="top"><label for="description"><?php _ex('Description', 'Taxonomy Description'); ?></label></th>
+                <td>
+                <?php
+                    $settings = array('wpautop' => true, 'media_buttons' => true, 'quicktags' => true, 'textarea_rows' => '15', 'textarea_name' => 'description' );
+                    wp_editor(wp_kses_post($tag->description , ENT_QUOTES, 'UTF-8'), 'cat_description', $settings);
+                ?>
+                <br />
+                <span class="description"><?php _e('The description is not prominent by default; however, some themes may show it.'); ?></span>
+                </td>
+            </tr>
+        </table>
+    <?php
+}
+
+add_action('admin_head', 'remove_default_category_description');
+function remove_default_category_description()
+{
+    global $current_screen;
+    if ( $current_screen->id == 'edit-category' )
+    {
+    ?>
+        <script type="text/javascript">
+        jQuery(function($) {
+            $('textarea#description').closest('tr.form-field').remove();
+        });
+        </script>
+    <?php
+    }
+}
+
+
+
+/***************************************
+* Change the opacity OR hide WordPress Admin Bar 
+* http://technerdia.com/1140_wordpress-admin-bar.html
+* 
+* Opacity is set to 50 on the frontend and 100 on the backend.
+* On hover 50 changes to 100.
+*
+*****************************************/
+function hide_adminbar() {
+	$hide_adminbar = '<script type="text/javascript">
+		$(document).ready( function() {
+			$("#wpadminbar").fadeTo( "slow", 0 );
+			$("#wpadminbar").hover(function() {
+				$("#wpadminbar").fadeTo( "slow", 1 );
+			}, function() {
+				$("#wpadminbar").fadeTo( "slow", 0 );
+			});
+		});
+	</script>
+	<style type="text/css">
+		html { margin-top: !important; }
+		* html body { margin-top: !important; }
+		#wpadminbar {
+			-ms-filter:"progid:DXImageTransform.Microsoft.Alpha(Opacity=50)"; 
+			filter: alpha(opacity=50);
+			-moz-opacity:0.5;
+			-khtml-opacity:0.5;
+			opacity:0.5;
+		}
+		#wpadminbar:hover, #wpadminbar:focus {
+			-ms-filter:"progid:DXImageTransform.Microsoft.Alpha(Opacity=100)";
+			filter: alpha(opacity=100);
+			-moz-opacity:1;
+			-khtml-opacity:1;
+			opacity:1;
+		}
+	</style>';
+	echo $hide_adminbar;
+}
+/* wp-admin area - Backend */
+/*if ( is_admin() ) {
+	add_action( 'admin_head', 'hide_adminbar' );
+}*/
+/* websites - Frontend */
+if ( !is_admin() ) {
+	add_action( 'wp_head', 'hide_adminbar' );
+}
+
+
+
+/*********************************
+* Add and remove dashboard widgets 
+* - activity, right now (At a Glance) and quick press (Quick Draft), primary (WordPress News)
+************************************/
+function wordimpress_dashboard_cleanup() {
+ 
+	//* remove meta boxes to the left
+//*	remove_meta_box( 'dashboard_activity', 'dashboard', 'normal' );
+//*	remove_meta_box( 'dashboard_right_now', 'dashboard', 'normal' );
+
+	//* remove meta boxes to the right
+//*	remove_meta_box( 'dashboard_primary', 'dashboard', 'side' );
+//*	remove_meta_box( 'dashboard_quick_press', 'dashboard', 'side' );
+
+}
+
+/***************************** 
+*Add a custom Welcome Panel
+*****************************/
+function my_welcome_panel() {
+    ?>
+    
+    <div class="top-welcome-panel-content">
+    	
+    	<div class="top-welcome-panel-logo" style="height: 120px;">
+      	<!-- Adds a logo top left-->
+      	
+      	<a href="http://wordimpress.com/building-first-custom-functionality-plugin/" target="_blank" style="float: left;"><img src="<?php echo plugins_url( '../assets/img/wordimpress-logo.png', __FILE__) ?>" title="Go to the Blog entry at WordImpress on part 1 - building the first custom functionality plugin"/></a> <b>Based on and inspired by</b> <br /> 
+    	
+    	<a href="http://advancedwp.org/" target="_blank" style="float: left; padding: 0 40px 20px 40px;"><img src="<?php echo plugins_url( '../assets/img/awp-logo.png', __FILE__) ?>" title="Advanced WordPress web page"/></a> Made by <br />
+    	
+    	<a href="http://easywebdesigntutorials.com/" target="_blank"><img src="<?php echo plugins_url( '../assets/img/easyweb-logo2.png', __FILE__) ?>" title="The web site for Easy Web Design Tutorials" style="padding: -20px 0 30px -10px; margin: -20px 0 -10px 0;"/></a>
+	  	</div>
+	  	
+    	<!-- using ?php_e makes the string/words translatable http://codex.wordpress.org/Function_Reference/_e -->
+    	<div class="title-welcome-panel" style="margin: 5px 0 5px 0;">
+   		 	<h2><?php _e( 'Welcome to WordPress. ' ); ?><br /></h2>
+   		</div>
+  		  	 <p class="about-description" style="float: left;"><?php _e( 'This is the backend. We use it to modify and add functions to the web site. The most important sections are: ' ); ?></p>
+     		</div>
+     	
+     
+    <div class="welcome-panel-column-container">
+    
+   	 <div class="welcome-panel-column welcome-panel-first">
+        <h4><?php _e( 'Add Content' ); ?></h4>
+        <ul>
+        
+        	<li><?php printf( '<a href="%s" class="dashicons dashicons-admin-page">' . __( 'Add a page' ) . '</a>', admin_url( 'edit.php?post_type=page' ) ); ?></li>
+        
+            <li><?php printf( '<a href="%s" class="dashicons dashicons-admin-post">' . __( 'Add a blog post (article)' ) . '</a>', admin_url( 'edit.php' ) ); ?></li>
+            
+          	<li><?php printf( '<a href="%s" class="dashicons dashicons-admin-media">' . __( 'Add to the Media Library' ) . '</a>', admin_url( 'upload.php' ) ); ?></li> 
+          	
+          	<!-- <li><?php printf( '<a href="%s" class="dashicons dashicons-welcome-view-site">' . __( 'View your site (frontend)' ) . '</a>', home_url( '/' ) ); ?></li></p> -->
+          	
+        </ul>
+   	 </div>
+   
+   	<div class="welcome-panel-column welcome-panel-middle">
+       <h4><?php _e( 'Appearance' ); ?></h4>
+       <ul>
+       
+       	<li><?php printf( '<a href="%s" class="dashicons dashicons-format-image">' . __( 'Check out the themes' ) . '</a>', admin_url( 'themes.php' ) ); ?></li>
+       
+           <li><?php printf( '<a href="%s" class="dashicons dashicons-hammer">' . __( 'Customize the look of your site' ) . '</a>', admin_url( 'customize.php' ) ); ?></li>
+                    	
+           <li><?php printf( '<div class="dashicons dashicons-welcome-widgets-menus">' . __( 'Manage <a href="%1$s">widgets</a> or <a href="%2$s">menus</a>' ) . '</div>', admin_url( 'widgets.php' ), admin_url( 'nav-menus.php' ) ); ?></li>
+           
+           <li><?php printf( '<a href="%s" class="dashicons dashicons-admin-plugins">' . __( 'Add a plugin' ) . '</a>', admin_url( 'upload.php' ) ); ?></li> 
+           
+       </ul>
+   	</div>
+      
+    <div class="welcome-panel-column welcome-panel-last">
+        <h4><?php _e( 'Settings' ); ?></h4>
+        <ul>
+            
+            <li><?php printf( '<a href="%s" class="dashicons dashicons-admin-generic">' . __( 'General' ) . '</a>', admin_url( 'options-general.php' ) ); ?></li></p>
+            
+            <li><?php printf( '<a href="%s" class="dashicons dashicons-clipboard">' . __( 'Reading' ) . '</a>', admin_url( 'options-reading.php' ) ); ?></li>
+            
+            <li><?php printf( '<a href="%s" class="dashicons dashicons-images-alt2">' . __( 'Media' ) . '</a>', admin_url( 'options-media.php' ) ); ?></li>          
+            
+             <li><?php printf( '<a href="%s" class="dashicons dashicons-admin-links">' . __( 'Permalink' ) . '</a>', admin_url( 'options-permalink.php' ) ); ?></li>
+            
+           <!-- <li><?php printf( '<a href="%s" class="welcome-icon welcome-learn-more">' . __( 'Learn more about getting started' ) . '</a>', __( 'http://codex.wordpress.org/First_Steps_With_WordPress' ) ); ?></li> -->
+        </ul>
+    </div>
+   </div>
+   
+    <div class="welcome-bottom-middle">
+    <h3 align=center><?php _e( 'Getting started series' ); ?></h3>
+   <!-- <p class="about-description">Create a new paragraph!</p>
+    <p>Write your custom message here</p> -->
+    <p align=center><iframe width="560" height="315" src="//www.youtube.com/embed/videoseries?list=PLD3AB608F62AC973C" frameborder="0" allowfullscreen></iframe></p>
+    <p align=center><?php _e('The first video shows the sections mentioned above' ); ?></p>
+     <p align=center><?php _e('Below are the standard Dashboard widget sections.' ); ?></p>
+    </div>
+    <!-- commented out the following close div tag to have all the widgets inside the welcome panel. Uncommented to move the default widgets outside of the welcome panel.
+    </div> -->
+<?php
+}
+
+remove_action('welcome_panel','wp_welcome_panel');
+add_action( 'welcome_panel', 'my_welcome_panel' );
+
+
+/********************* 
+* re-order admin panel
+* Do also check this page: http://www.paulund.co.uk/add-menu-item-to-wordpress-admin
+*
+**********************/
+function wordimpress_reorder_menu( $__return_true ) {
+	return array(
+		'index.php', // this represents the dashboard link
+		'edit.php?post_type=page', // this is the default page menu
+		'edit.php?post_type=post', // this is the default page menu
+		'edit.php', // this is the default POST admin menu
+		'upload.php',
+		'edit-comments.php',
+	);
+}
+
+add_filter( 'custom_menu_order', 'wordimpress_reorder_menu' );
+add_filter( 'menu_order', 'wordimpress_reorder_menu' );
+
+/**
+ * Remove Menu Links
+ *
+ * @see : https://codex.wordpress.org/Function_Reference/remove_menu_page
+ * @TODO: Determin which menu pages, if any, you would like removed
+ */
+function wordimpress_remove_menus() {
+
+//  remove_menu_page( 'index.php' );                  //Dashboard
+//	remove_menu_page( 'edit.php' ); 										//Posts
+//  remove_menu_page( 'upload.php' );                 //Media
+//  remove_menu_page( 'edit.php?post_type=page' );    //Pages
+//  remove_menu_page( 'edit-comments.php' );          //Comments
+//  remove_menu_page( 'themes.php' );                 //Appearance
+//  remove_menu_page( 'plugins.php' );                //Plugins
+//  remove_menu_page( 'users.php' );                  //Users
+//  remove_menu_page( 'tools.php' );                  //Tools
+//  remove_menu_page( 'options-general.php' );        //Settings
+
+}
+
+add_action( 'admin_menu', 'wordimpress_remove_menus' );
