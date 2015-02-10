@@ -1,0 +1,358 @@
+<?php
+/**
+ *  Appearance Customizations
+ *
+ * @description: All functions that customize the appearance go here
+ */
+
+
+/*---------- Images -----------*/
+
+/************ TRY OUT WITH LIGHTBOX CODE****
+*
+* Add Rel="lightbox" to all images embedded in a post.
+* http://wpsnipp.com/index.php/functions-php/add-rel-lightbox-to-all-images-embedded-in-a-post/ 
+*
+******************
+
+add_filter('the_content', 'my_addlightboxrel');
+function my_addlightboxrel($content) {
+       global $post;
+       $pattern ="/<a(.*?)href=('|\")(.*?).(bmp|gif|jpeg|jpg|png)('|\")(.*?)>/i";
+       $replacement = '<a$1href=$2$3.$4$5 rel="lightbox" title="'.$post->post_title.'"$6>';
+       $content = preg_replace($pattern, $replacement, $content);
+       return $content;
+}
+
+/*******************
+* 
+* Sharpen thumbnails
+* https://managewp.com/enhanced-performance-code-snippets
+*
+********************
+
+function ajx_sharpen_resized_files( $resized_file ) {
+ 
+    $image = wp_load_image( $resized_file );
+    if ( !is_resource( $image ) )
+        return new WP_Error( 'error_loading_image', $image, $file );
+ 
+    $size = @getimagesize( $resized_file );
+    if ( !$size )
+        return new WP_Error('invalid_image', __('Could not read image size'), $file);
+    list($orig_w, $orig_h, $orig_type) = $size;
+ 
+    switch ( $orig_type ) {
+        case IMAGETYPE_JPEG:
+            $matrix = array(
+                array(-1, -1, -1),
+                array(-1, 16, -1),
+                array(-1, -1, -1),
+            );
+ 
+            $divisor = array_sum(array_map('array_sum', $matrix));
+            $offset = 0;
+            imageconvolution($image, $matrix, $divisor, $offset);
+            imagejpeg($image, $resized_file,apply_filters( 'jpeg_quality', 90, 'edit_image' ));
+            break;
+        case IMAGETYPE_PNG:
+            return $resized_file;
+        case IMAGETYPE_GIF:
+            return $resized_file;
+    }
+ 
+    return $resized_file;
+}  
+ 
+add_filter('image_make_intermediate_size', 'ajx_sharpen_resized_files',900);
+
+
+
+
+/*---------- Menu -------------*/
+
+
+
+
+
+
+/*----------- Media Library -----------*/
+
+
+
+/*---------- WIDGETS ---------*/
+
+/********************************************
+* Enable shortcodes in text widgets
+* http://stephanieleary.com/2010/02/using-shortcodes-everywhere/
+********************************************/
+
+add_filter( 'widget_text', 'shortcode_unautop');
+add_filter( 'widget_text', 'do_shortcode');
+
+
+/**********************
+* Enable PHP Scripts in text widgets
+* http://andornagy.com/enable-scripts-and-shortcodes-in-wordpress-text-widgets/
+***********************/
+ 
+add_filter('widget_text', 'php_text', 99);
+ 
+function php_text($text) {
+ if (strpos($text, '<' . '?') !== false) {
+ ob_start();
+ eval('?' . '>' . $text);
+ $text = ob_get_contents();
+ ob_end_clean();
+ }
+ return $text;
+}
+
+
+
+ /*------- Avatar --------*/
+ 
+
+/****************************************************************
+* Add a new custom Gravatar to the bottom of the Settings -> Discussion section
+* http://blogtimenow.com/wordpress/create-add-custom-default-avatar-wordpress-gravatar/
+*
+*********************************************************************/
+add_filter( 'avatar_defaults', 'new_custom_default_gravatar' );
+function new_custom_default_gravatar ($avatar_defaults) {
+$myavatar = 'http://upload.wikimedia.org/wikipedia/commons/thumb/8/85/Smiley.svg/800px-Smiley.svg.png';
+$avatar_defaults[$myavatar] = "Custom Default Gravatar";
+return $avatar_defaults;
+}
+
+
+/**************************************************
+* Custom avatar link added to the profile page.
+* http://www.billerickson.net/wordpress-custom-avatar/
+*
+**************************************************
+/**
+ * Add Custom Avatar Field
+ * @author Bill Erickson
+ * @link http://www.billerickson.net/wordpress-custom-avatar/
+ *
+ * @param object $user
+ */
+function be_custom_avatar_field( $user ) { ?>
+	<h3>Custom Avatar</h3>
+	<table>
+	<tr>
+	<th><label for="be_custom_avatar"></label></th>
+	<td>
+	<input type="text" style="width: 100%;" name="be_custom_avatar" id="be_custom_avatar" value="<?php echo esc_attr( get_the_author_meta( 'be_custom_avatar', $user->ID ) ); ?>" />
+	<span> <i>Type in the <b>URL</b> of the image you'd like to use as your avatar. <br /><strong>Image should be 70x70 pixels.</strong> <p>This will override your default Gravatar, or show up if you don't have a Gravatar. <br /></span>
+	</td>
+	</tr>
+	</table>
+	<?php 
+}
+add_action( 'show_user_profile', 'be_custom_avatar_field' );
+add_action( 'edit_user_profile', 'be_custom_avatar_field' );
+ 
+/**
+ * Save Custom Avatar Field
+ * @author Bill Erickson
+ * @link http://www.billerickson.net/wordpress-custom-avatar/
+ *
+ * @param int $user_id
+ */
+function be_save_custom_avatar_field( $user_id ) {
+	if ( !current_user_can( 'edit_user', $user_id ) ) { return false; }
+		update_usermeta( $user_id, 'be_custom_avatar', $_POST['be_custom_avatar'] );
+}
+add_action( 'personal_options_update', 'be_save_custom_avatar_field' );
+add_action( 'edit_user_profile_update', 'be_save_custom_avatar_field' );
+
+function be_gravatar_filter($avatar, $id_or_email, $size, $default, $alt) {
+	$custom_avatar = get_the_author_meta('be_custom_avatar');
+	if ($custom_avatar) 
+		$return = '<img src="'.$custom_avatar.'" width="'.$size.'" height="'.$size.'" alt="avatar" class="avatar" />';
+	elseif ($avatar) 
+		$return = $avatar;
+	else 
+		$return = '<img src="'.$default.'" width="'.$size.'" height="'.$size.'" alt="'.$alt.'" />';
+ 
+	return $return;
+}
+add_filter('get_avatar', 'be_gravatar_filter', 10, 5);
+
+
+
+/***************************************
+*
+* Remove default author profile fields 
+* http://www.wpbeginner.com/wp-tutorials/25-extremely-useful-tricks-for-the-wordpress-functions-file/
+*
+******************************************/
+
+add_filter('user_contactmethods','hide_profile_fields',10,1);
+ 
+function hide_profile_fields( $contactmethods ) {
+  unset($contactmethods['aim']);
+  unset($contactmethods['jabber']);
+  unset($contactmethods['yim']);
+  return $contactmethods;
+}
+
+
+/***********************************************************
+*
+* Adding additional social media fields in profile settings
+* http://andornagy.com/custom-profile-fields-wordpress/
+*
+*************************************************************/
+   
+add_filter('user_contactmethods', 'my_user_contactmethods');  
+               
+function my_user_contactmethods($user_contactmethods){  
+  
+  $user_contactmethods['facebook'] = 'Facebook URL';  
+  $user_contactmethods['twitter'] = 'Twitter Username'; 
+  $user_contactmethods['linked'] = 'Linkedin Username';  
+  $user_contactmethods['google'] = 'Google Profile Link';  
+  $user_contactmethods['youtube'] = 'Youtube Channel Name'; 
+  $user_contactmethods['pinterest'] = 'Printerest Username';  
+   
+  
+  return $user_contactmethods;  
+}   
+
+if ( get_the_author_meta( 'twitter' ) ) { 
+    	the_author_meta( 'twitter' ); 
+ 
+}     	
+// End check for twitter 
+  
+
+if ( get_the_author_meta( 'facebook' ) ) { 
+    	the_author_meta( 'facebook' ); 
+
+}    	
+// End check for facebook
+
+
+/******************************
+*
+* Open Graph 
+* http://www.paulund.co.uk/add-facebook-open-graph-tags-to-wordpress
+*
+* To get the correct title, description and image data to show when
+* pasting a link to facebook.
+*
+* Test to see that it is working: 
+* http://coveloping.com/tools/open-graph-tag-tester
+*
+*******************************/
+
+// Facebook Open Graph
+add_action('wp_head', 'add_fb_open_graph_tags');
+function add_fb_open_graph_tags() {
+	if (is_single()) {
+		global $post;
+		if(get_the_post_thumbnail($post->ID, 'thumbnail')) {
+			$thumbnail_id = get_post_thumbnail_id($post->ID);
+			$thumbnail_object = get_post($thumbnail_id);
+			$image = $thumbnail_object->guid;
+		} else {	
+			$image = ''; // Change this to the URL of the logo you want beside your links shown on Facebook
+		}
+		//$description = get_bloginfo('description');
+		$description = my_excerpt( $post->post_content, $post->post_excerpt );
+		$description = strip_tags($description);
+		$description = str_replace("\"", "'", $description);
+?>
+<meta property="og:title" content="<?php the_title(); ?>" />
+<meta property="og:type" content="article" />
+<meta property="og:image" content="<?php echo $image; ?>" />
+<meta property="og:url" content="<?php the_permalink(); ?>" />
+<meta property="og:description" content="<?php echo $description ?>" />
+<meta property="og:site_name" content="<?php echo get_bloginfo('name'); ?>" />
+
+<?php 	}
+}
+
+/***********************
+*
+* Excerpt - belonging to the above code
+*
+*************************/
+
+function my_excerpt($text, $excerpt){
+	
+    if ($excerpt) return $excerpt;
+
+    $text = strip_shortcodes( $text );
+
+    $text = apply_filters('the_content', $text);
+    $text = str_replace(']]>', ']]&gt;', $text);
+    $text = strip_tags($text);
+    $excerpt_length = apply_filters('excerpt_length', 55);
+    $excerpt_more = apply_filters('excerpt_more', ' ' . '[...]');
+    $words = preg_split("/[\n
+	 ]+/", $text, $excerpt_length + 1, PREG_SPLIT_NO_EMPTY);
+    if ( count($words) > $excerpt_length ) {
+            array_pop($words);
+            $text = implode(' ', $words);
+            $text = $text . $excerpt_more;
+    } else {
+            $text = implode(' ', $words);
+    }
+
+    return apply_filters('wp_trim_excerpt', $text, $excerpt);
+}
+
+
+
+
+/***********
+*
+* Share on Facebook and Twitter not sure if it works or not.
+*
+*************
+
+function share_this($content){
+    if(!is_feed() && !is_home()) {
+        $content .= '<div class="share-this">
+                    <a href="http://twitter.com/share"
+class="twitter-share-button"
+data-count="horizontal">Tweet</a>
+                    <script type="text/javascript"
+src="http://platform.twitter.com/widgets.js"></script>
+                    <div class="facebook-share-button">
+                        <iframe
+src="http://www.facebook.com/plugins/like.php?href='.
+urlencode(get_permalink($post->ID))
+.'&amp;layout=button_count&amp;show_faces=false&amp;width=200&amp;action=like&amp;colorscheme=light&amp;height=21"
+scrolling="no" frameborder="0" style="border:none;
+overflow:hidden; width:200px; height:21px;"
+allowTransparency="true"></iframe>
+                    </div>
+                </div>';
+    }
+    return $content;
+}
+add_action('the_content', 'share_this');
+
+
+/**********
+*
+* Google Plus to bottom of page.
+*
+****************
+
+add_filter('the_content', 'google_plus');
+function google_plus($content) {
+	$content = $content.'<g:plusone size="tall" href="'.get_permalink().'"></g:plusone>';
+	return $content;
+}
+
+add_action ('wp_enqueue_scripts', 'google_plus_script');
+function google_plus_script () {
+	wp_enqueue_script('google-plus', 'http://apis.google.com/js/plusone.js', array(), null);
+}
+

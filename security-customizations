@@ -1,0 +1,183 @@
+<?php
+/**
+ *  Security Customizations
+ *
+ * @description: All security functions go here
+ */
+
+/*************
+*
+* Update URL on search. Example: /search/keywords+here 
+* https://managewp.com/enhanced-performance-code-snippets
+*
+*******************/
+
+function fb_change_search_url_rewrite() {
+    if ( is_search() && ! empty( $_GET['s'] ) ) {
+        wp_redirect( home_url( "/search/" ) . urlencode( get_query_var( 's' ) ) );
+        exit();
+    }  
+}
+add_action( 'template_redirect', 'fb_change_search_url_rewrite' );
+
+
+/************
+* Automatic change the permalink
+* http://wordpress.stackexchange.com/questions/31207/how-to-set-permalink-structure-via-functions-php
+*
+******************/
+
+add_action( 'init', function() {
+    global $wp_rewrite;
+    $wp_rewrite->set_permalink_structure( '%postname%/' );
+} );
+
+
+
+/***********************
+*
+* Force all scripts into wp_footer
+* https://managewp.com/enhanced-performance-code-snippets
+*
+***********************/
+
+if(!is_admin()){
+    remove_action('wp_head', 'wp_print_scripts');
+    remove_action('wp_head', 'wp_print_head_scripts', 9);
+    remove_action('wp_head', 'wp_enqueue_scripts', 1);
+ 
+    add_action('wp_footer', 'wp_print_scripts', 5);
+    add_action('wp_footer', 'wp_enqueue_scripts', 5);
+    add_action('wp_footer', 'wp_print_head_scripts', 5);
+}
+
+
+/****************************
+*
+* Hide update warning for every user but admin
+* http://www.1stwebdesigner.com/wordpress/12-wordpress-coding-snippets-hacks/
+*****************************/
+
+function wp_hide_update() {
+        global $current_user;
+        get_currentuserinfo();
+
+        if ($current_user->ID != 1) { // only admin will see it
+            remove_action( 'admin_notices', 'update_nag', 3 );
+        }
+    }
+    add_action('admin_menu','wp_hide_update');
+
+/*************************
+* 
+* Email Address Encoder plugin by Til Kruss
+* http://wordpress.org/support/plugin/email-address-encoder 
+*
+**************************/
+
+
+/**
+ * Define plugin constants that can be overridden, generally in wp-config.php.
+ */
+if (!defined('EAE_FILTER_PRIORITY'))
+	define('EAE_FILTER_PRIORITY', 1000);
+
+/**
+ * Register filters to encode exposed email addresses in
+ * posts, pages, excerpts, comments and widgets.
+ */
+foreach (array('the_content', 'the_excerpt', 'widget_text', 'comment_text', 'comment_excerpt') as $filter) {
+	add_filter($filter, 'eae_encode_emails', EAE_FILTER_PRIORITY);
+}
+
+/**
+ * Searches for plain email addresses in given $string and
+ * encodes them (by default) with the help of eae_encode_str().
+ *
+ * Regular expression is based on based on John Gruber's Markdown.
+ * http://daringfireball.net/projects/markdown/
+ *
+ * @param string $string Text with email addresses to encode
+ * @return string $string Given text with encoded email addresses
+ */
+function eae_encode_emails($string) {
+
+	// abort if $string doesn't contain a @-sign
+	if (apply_filters('eae_at_sign_check', true)) {
+		if (strpos($string, '@') === false) return $string;
+	}
+
+	// override encoding function with the 'eae_method' filter
+	$method = apply_filters('eae_method', 'eae_encode_str');
+
+	// override regex pattern with the 'eae_regexp' filter
+	$regexp = apply_filters(
+		'eae_regexp',
+		'{
+			(?:mailto:)?
+			(?:
+				[-!#$%&*+/=?^_`.{|}~\w\x80-\xFF]+
+			|
+				".*?"
+			)
+			\@
+			(?:
+				[-a-z0-9\x80-\xFF]+(\.[-a-z0-9\x80-\xFF]+)*\.[a-z]+
+			|
+				\[[\d.a-fA-F:]+\]
+			)
+		}xi'
+	);
+
+	return preg_replace_callback(
+		$regexp,
+		create_function(
+            '$matches',
+            'return '.$method.'($matches[0]);'
+        ),
+		$string
+	);
+
+}
+
+/**
+ * Encodes each character of the given string as either a decimal
+ * or hexadecimal entity, in the hopes of foiling most email address
+ * harvesting bots.
+ *
+ * Based on Michel Fortin's PHP Markdown:
+ *   http://michelf.com/projects/php-markdown/
+ * Which is based on John Gruber's original Markdown:
+ *   http://daringfireball.net/projects/markdown/
+ * Whose code is based on a filter by Matthew Wickline, posted to
+ * the BBEdit-Talk with some optimizations by Milian Wolff.
+ *
+ * @param string $string Text with email addresses to encode
+ * @return string $string Given text with encoded email addresses
+ */
+function eae_encode_str($string) {
+
+	$chars = str_split($string);
+	$seed = mt_rand(0, (int) abs(crc32($string) / strlen($string)));
+
+	foreach ($chars as $key => $char) {
+
+		$ord = ord($char);
+
+		if ($ord < 128) { // ignore non-ascii chars
+
+			$r = ($seed * (1 + $key)) % 100; // pseudo "random function"
+
+			if ($r > 60 && $char != '@') ; // plain character (not encoded), if not @-sign
+			else if ($r < 45) $chars[$key] = '&#x'.dechex($ord).';'; // hexadecimal
+			else $chars[$key] = '&#'.$ord.';'; // decimal (ascii)
+
+		}
+
+	}
+
+	return implode('', $chars);
+
+}
+
+/**********************/
